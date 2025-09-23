@@ -64,6 +64,13 @@ df.createOrReplaceTempView("job_postings")
 # df.show(5)
 ```
 
+```{python}
+# Histogram of SALARY distribution
+salary_df = df.filter(col("SALARY").isNotNull() & (col("SALARY") > 0))
+fig = px.histogram(salary_df.toPandas(), x="SALARY", nbins=50, title="Salary Distribution")
+fig.update_layout(bargap=0.1)
+
+```
 
 # Data Preparation 
 We will be converting numerical columns to floats - this is so we can perform functions on it such as average. 
