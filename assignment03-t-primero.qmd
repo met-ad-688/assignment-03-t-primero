@@ -83,13 +83,15 @@ def compute_median(sdf, col_name):
 
 median_from = compute_median(df, "SALARY_FROM")
 median_to = compute_median(df, "SALARY_TO")
+median_salary = compute_median(df, "SALARY")
 
-print("Medians:", median_from, median_to)
+print("Medians:", median_from, median_to, median_salary)
 
 # Step 3: Imputing missing salaries, but not experience
 df = df.fillna({
     "SALARY_FROM": median_from,
     "SALARY_TO": median_to
+    "SALARY": median_salary
 })
 
 # Step 5: Computing average salary
@@ -101,6 +103,7 @@ export_cols = [
     "REMOTE_TYPE_NAME",
     "MAX_YEARS_EXPERIENCE",
     "Average_Salary",
+    "SALARY"
     "LOT_V6_SPECIALIZED_OCCUPATION_NAME"
 ]
 df_selected = df.select(*export_cols)
@@ -111,7 +114,6 @@ pdf.to_csv("./data/lightcast_cleaned.csv", index=False)
 
 
 ```
-
 
 # Salary Distribution by Industry and Employment Type
 Compare salary variations across industries.
@@ -127,3 +129,30 @@ Create a box plot where:
 Group by 'EMPLOYMENT_TYPE_NAME'.
 Customize colors, fonts, and styles.
 **Explanation:** Write two sentences about what the graph reveals.
+
+```{python}
+# Your Code for 1st question here
+
+# Filter out missing or zero salary values
+pdf = df.filter(df["SALARY"] > 0).select("EMPLOYMENT_TYPE_NAME", "SALARY").toPandas()
+
+# Clean employment type names for better readability
+pdf["EMPLOYMENT_TYPE_NAME"] = pdf["EMPLOYMENT_TYPE_NAME"].apply(lambda x: re.sub(r"[^\x00-\x7f]+", "", x))
+
+# Compute median salary for sorting
+median_salaries = pdf.groupby("EMPLOYMENT_TYPE_NAME")["SALARY"].median()
+
+# Sort employment types based on median salary in descending order
+sorted_employment_types = median_salaries.sort_values(ascending=False).index
+
+# Apply sorted categories
+pdf["EMPLOYMENT_TYPE_NAME"] = pd.Categorical(
+    pdf["EMPLOYMENT_TYPE_NAME"],
+    categories=sorted_employment_types,
+    ordered=True
+)
+
+# Create box plot with horizontal grid lines
+fig = px.box(
+
+```
