@@ -171,4 +171,5 @@ cython_debug/
 .pypirc
 lightcast_job_postings.csv
 lightcast_job_postings.csv
-lightcast_cleaned.csv
+.\data\lightcast_job_postings.csv
+.\data\lightcast_cleaned.csv

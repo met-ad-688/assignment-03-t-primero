@@ -16,7 +16,7 @@ format:
     toc-depth: 2
   docx: default
   pdf: default
-execut:
+execute:
   freeze: auto
 date-modified: today
 date-format: long
@@ -64,14 +64,6 @@ df.createOrReplaceTempView("job_postings")
 # df.show(5)
 ```
 
-```{python}
-# Histogram of SALARY distribution
-salary_df = df.filter(col("SALARY").isNotNull() & (col("SALARY") > 0))
-fig = px.histogram(salary_df.toPandas(), x="SALARY", nbins=50, title="Salary Distribution")
-fig.update_layout(bargap=0.1)
-
-```
-
 # Data Preparation 
 We will be converting numerical columns to floats - this is so we can perform functions on it such as average. 
 
@@ -98,7 +90,6 @@ print("Medians:", median_from, median_to, median_salary)
 df = df.fillna({
     "SALARY_FROM": median_from,
     "SALARY_TO": median_to
-    "SALARY": median_salary
 })
 
 # Step 5: Computing average salary
@@ -110,7 +101,6 @@ export_cols = [
     "REMOTE_TYPE_NAME",
     "MAX_YEARS_EXPERIENCE",
     "Average_Salary",
-    "SALARY"
     "LOT_V6_SPECIALIZED_OCCUPATION_NAME"
 ]
 df_selected = df.select(*export_cols)
@@ -119,6 +109,14 @@ df_selected = df.select(*export_cols)
 pdf = df_selected.toPandas()
 pdf.to_csv("./data/lightcast_cleaned.csv", index=False)      
 
+print("Data cleaning complete. Rows retained:", len(pdf))
+
+```
+```{python}
+# Histogram of SALARY distribution
+# salary_df = df.filter(col("SALARY").isNotNull() & (col("SALARY") > 0))
+#fig = px.histogram(salary_df.toPandas(), x="SALARY", nbins=50, title="Salary Distribution")
+#fig.update_layout(bargap=0.1)
 
 ```
 
@@ -139,15 +137,21 @@ Customize colors, fonts, and styles.
 
 ```{python}
 # Your Code for 1st question here
+import pandas as pd
+import polars as pl
 
 # Filter out missing or zero salary values
 pdf = df.filter(df["SALARY"] > 0).select("EMPLOYMENT_TYPE_NAME", "SALARY").toPandas()
+# pdf.head()
 
 # Clean employment type names for better readability
+# This Basically looks for symbols numbers (which were incorrectly added into data name)
 pdf["EMPLOYMENT_TYPE_NAME"] = pdf["EMPLOYMENT_TYPE_NAME"].apply(lambda x: re.sub(r"[^\x00-\x7f]+", "", x))
+# pdf.head()
 
 # Compute median salary for sorting
 median_salaries = pdf.groupby("EMPLOYMENT_TYPE_NAME")["SALARY"].median()
+# median_salaries.head()
 
 # Sort employment types based on median salary in descending order
 sorted_employment_types = median_salaries.sort_values(ascending=False).index
@@ -161,5 +165,71 @@ pdf["EMPLOYMENT_TYPE_NAME"] = pd.Categorical(
 
 # Create box plot with horizontal grid lines
 fig = px.box(
+    pdf,
+    x="EMPLOYMENT_TYPE_NAME",
+    y="SALARY",
+    title="Salary Distribution by Employment Type",
+    color_discrete_sequence=["orange"],  # Single neutral color
+    boxmode="group",
+    points="all",  # Show all outliers
+)
+# Improve layout, font styles, and axis labels
+fig.update_layout(
+    title=dict(
+        text="Salary Distribution by Employment Type",
+        font=dict(size=26, family="Verdana", color="black", weight="bold")  # Bigger & Bold Title
+    ),
+    xaxis=dict(
+        title=dict(text="Employment Type", font=dict(size=22, family="Verdana", color="black", weight="bold")),  # Bigger X-label
+        tickangle=0,  # Rotate X-axis labels for readability
+        tickfont=dict(size=18, family="Verdana", color="black", weight="bold"),  # Bigger & Bold X-ticks
+        showline=True,  # Show axis lines
+        linewidth=2,  # Thicker axis lines
+        linecolor="black",
+        mirror=True,
+        showgrid=False,  # Remove vertical grid lines
+        categoryorder="array",
+        categoryarray=sorted_employment_types.tolist()
+    ),
+    yaxis=dict(
+        title=dict(text="Salary (Thousands)", font=dict(size=22, family="Verdana", color="black", weight="bold")),  # Bigger Y-label
+        tickvals=[0, 50000, 100000, 150000, 200000, 250000, 300000, 350000, 400000, 450000, 500000],
+        ticktext=["0", "50", "100", "150", "200", "250", "300", "350", "400", "450", "500"],
+        tickfont=dict(size=18, family="Verdana", color="black", weight="bold"),  # Bigger & Bold Y-ticks
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        mirror=True,
+        showgrid=True,  # Enable light horizontal grid lines
+        gridcolor="lightgray",  # Light shade for the horizontal grid
+        gridwidth=0.5  # Thin grid lines
+    ),
+    font=dict(family="Verdana", size=16, color="black"),
+    boxgap=0.5,
+    plot_bgcolor="white",
+    paper_bgcolor="white",
+    showlegend=False,
+    height=500,
+    width=850
+)
+
+# Show the figure
+fig.show()
+```
+# Salary Distribution by Industry
+```{python}
+
+#| eval: true
+#| echo: true
+#| fig-align: center
+
+pdf = df.select("NAICS2_NAME", "SALARY").toPandas()
+fig = px.box(pdf, x="NAICS2_NAME", y="SALARY", title="Salary Distribution by Industry", color_discrete_sequence=["#EF553B"])
+fig.update_layout(font_family="Arial", title_font_size=16,
+                  height=1000,
+                  width=1200)
+# Rotate x-axis labels for readability
+fig.update_xaxes(tickangle=45, tickfont=dict(size=12))
+fig.show()
 
 ```
