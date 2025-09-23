@@ -209,14 +209,15 @@ fig.update_layout(
     plot_bgcolor="white",
     paper_bgcolor="white",
     showlegend=False,
-    height=500,
-    width=850
+    height=800,
+    width=900
 )
 
 # Show the figure
 fig.show()
 ```
 # Salary Distribution by Industry
+
 ```{python}
 
 #| eval: true
@@ -231,5 +232,59 @@ fig.update_layout(font_family="Arial", title_font_size=16,
 # Rotate x-axis labels for readability
 fig.update_xaxes(tickangle=45, tickfont=dict(size=12))
 fig.show()
+
+```
+
+# Salary Analysis by ONET Occupation Type (Bubble Chart)
+Analyze how salaries differ across ONET occupation types.
+**Aggregate Data**
+Compute median salary for each occupation in the ONET taxonomy.
+**Visualize results**
+Create a bubble chart where:
+**X-axis** = ONET_NAME
+**Y-axis** = Median Salary
+**Size** = Number of job postings
+Apply custom colors and font styles.
+**Explanation**: Write two sentences about what the graph reveals.
+
+```{python}
+#| eval: false
+#| echo: false
+
+# Step 1: Spark SQL - Median salary and job count per TITLE_NAME
+salary_analysis = spark.sql("""
+SELECT
+    TITLE_NAME AS ONET_NAME,
+    PERCENTILE(SALARY, 0.5) AS Median_Salary,
+    COUNT(*) AS Job_Postings
+FROM job_postings
+GROUP BY TITLE_NAME
+ORDER BY Job_Postings DESC
+LIMIT 10
+""")
+
+# Step 2: Convert to Pandas DataFrame
+salary_pd = salary_analysis.toPandas()
+salary_pd.head()
+
+```
+# ```{python}
+# Step 3: Bubble chart using Plotly
+import plotly.express as px
+
+fig = px.scatter(
+    salary_pd,
+    x="ONET_NAME",
+    y="Median_Salary",
+    size="Job_Postings",
+    title="Salary Analysis by ONET Occupation Type (Bubble Chart)",
+    labels={
+        "ONET_NAME": "ONET Occupation",
+        "Median_Salary": "Median Salary",
+        "Job_Postings": "Number of Job Postings"
+    },
+    hover_name="ONET_NAME",
+    size_max=60,
+
 
 ```
