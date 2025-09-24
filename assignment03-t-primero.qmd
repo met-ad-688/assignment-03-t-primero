@@ -248,16 +248,17 @@ Apply custom colors and font styles.
 **Explanation**: Write two sentences about what the graph reveals.
 
 ```{python}
-#| eval: false
+#| eval: true
 #| echo: false
 
 # Step 1: Spark SQL - Median salary and job count per TITLE_NAME
 salary_analysis = spark.sql("""
 SELECT
-    TITLE_NAME AS ONET_NAME,
+    TITLE_NAME AS Occupation_Name,
     PERCENTILE(SALARY, 0.5) AS Median_Salary,
     COUNT(*) AS Job_Postings
 FROM job_postings
+WHERE TITLE_NAME <> 'Unclassified' -- removed entries with 'Unclassified' title
 GROUP BY TITLE_NAME
 ORDER BY Job_Postings DESC
 LIMIT 10
@@ -267,24 +268,176 @@ LIMIT 10
 salary_pd = salary_analysis.toPandas()
 salary_pd.head()
 
-```
-# ```{python}
+
+
+
 # Step 3: Bubble chart using Plotly
 import plotly.express as px
 
 fig = px.scatter(
     salary_pd,
-    x="ONET_NAME",
+    x="Occupation_Name",
     y="Median_Salary",
     size="Job_Postings",
     title="Salary Analysis by ONET Occupation Type (Bubble Chart)",
     labels={
-        "ONET_NAME": "ONET Occupation",
+        "Occupation_Name": "ONET Occupation",
         "Median_Salary": "Median Salary",
         "Job_Postings": "Number of Job Postings"
     },
-    hover_name="ONET_NAME",
+    hover_name="Occupation_Name",
     size_max=60,
+    width=1000,
+    height=600,
+    color="Job_Postings",
+    color_continuous_scale="Plasma"
+)
+
+# Step 4: Layout customization
+fig.update_layout(
+    font_family="Arial",
+    font_size=14,
+    title_font_size=25,
+    xaxis_title="ONET Occupation",
+    yaxis_title="Median Salary",
+    plot_bgcolor="white",
+    xaxis=dict(
+        tickangle=-45,
+        showline=True,
+        linecolor="black"
+),
+    yaxis=dict(
+        showline=True,
+        linecolor="black"
+    )
+)
+
+# Step 5: Show and export
+fig.show()
+fig.write_image("output/Q7.svg", width=1000, height=600, scale=1)
+```
+
+
+```{python}
+# Defining education level groupings
+lower_deg = ["Bachelor's", "Associate", "GED", "No Education Listed", "High school"]
+higher_deg = ["Master's degree", "PhD or professional degree"]
+
+# Adding EDU_GROUP column
+df = df.withColumn(
+    "EDU_GROUP",
+    when(col("EDUCATION_LEVELS_NAME").rlike("|".join([f"(?i){deg}" for deg in lower_deg])), "Bachelor's or lower")
+    .when(col("EDUCATION_LEVELS_NAME").rlike("|".join([f"(?i){deg}" for deg in higher_deg])), "Master's or PhD")
+    .otherwise("Other")
+)
+
+# Casting necessary columns to float
+df = df.withColumn("MAX_YEARS_EXPERIENCE", col("MAX_YEARS_EXPERIENCE").cast("float"))
+df = df.withColumn("Average_Salary", col("Average_Salary").cast("float"))
+
+# Filtering for non-null and positive values
+df = df.filter(
+    col("MAX_YEARS_EXPERIENCE").isNotNull() &
+    col("Average_Salary").isNotNull() &
+    (col("MAX_YEARS_EXPERIENCE") > 0) &
+    (col("Average_Salary") > 0)
+)
+
+# Filtering for just the two education groups
+df_filtered = df.filter(col("EDU_GROUP").isin("Bachelor's or lower", "Master's or PhD"))
+
+# Converting to Pandas for plotting
+df_pd = df_filtered.toPandas()
+
+```
+
+```{python}
+
+fig1 = px.scatter(
+    df_pd,
+    x="MAX_YEARS_EXPERIENCE",
+    y="Average_Salary",
+    color="EDU_GROUP",
+    hover_data=["LOT_V6_SPECIALIZED_OCCUPATION_NAME"],
+    title="<b>Experience vs Salary by Education Level</b>",
+    opacity=0.7,
+    color_discrete_sequence=["#636EFA", "#EF553B"]  # Blue, Red
+)
+
+fig1.update_traces(marker=dict(size=7, line=dict(width=1, color="black")))
+
+fig1.update_layout(
+    plot_bgcolor="#f0f0f0",  # light grey chart background
+    paper_bgcolor="#FFF5DC",  # soft blue frame
+    font=dict(family="Segoe UI", size=14),
+    title_font=dict(size=22),
+    xaxis_title="Years of Experience",
+    yaxis_title="Average Salary (USD)",
+    legend_title="Education Group",
+    hoverlabel=dict(bgcolor="white", font_size=13, font_family="Arial"),
+    margin=dict(t=70, b=60, l=60, r=60),
+    xaxis=dict(
+        gridcolor="lightgrey",
+        tickmode='linear',
+        dtick= 1 #show every integer year clearly
+    ),
+    yaxis=dict(gridcolor="lightgrey")
+)
+
+fig1.show()
+fig1.write_html("output\q_1a_Experience_vs_Salary_by_Education_Level")
+
+```
+
+# Salary by Remote Work Type
+Split into three groups based on 'REMOTE_TYPE_NAME':
+Remote
+Hybrid
+Onsite (includes [None] and blank)
+Plot scatter plots for each group using, 'MAX_YEARS_EXPERIENCE' (with jitter), 'Average_Salary', 'LOT_V6_SPECIALIZED_OCCUPATION_NAME'
+Also, create salary histograms for all three groups.
+After each graph, briefly describe any patterns or comparisons.
+```{python}
+
+# Step 1: Create the Average_Salary column using SQL
+remote_salary_data = spark.sql("""
+SELECT 
+    MAX_YEARS_EXPERIENCE,
+    (SALARY_FROM + SALARY_TO) / 2 AS Average_Salary,
+    LOT_V6_SPECIALIZED_OCCUPATION_NAME,
+    CASE 
+        WHEN REMOTE_TYPE_NAME = 'Remote' THEN 'Remote'
+        WHEN REMOTE_TYPE_NAME = 'Hybrid' THEN 'Hybrid'
+        ELSE 'Onsite'
+    END AS REMOTE_GROUP
+FROM job_postings
+WHERE SALARY_FROM IS NOT NULL 
+  AND SALARY_TO IS NOT NULL
+  AND SALARY_FROM > 0
+  AND SALARY_TO > 0
+  AND MAX_YEARS_EXPERIENCE IS NOT NULL
+""")
+
+# Step 2: Convert to pandas for plotting
+df_viz = remote_salary_data.toPandas()
+
+# Step 3: Create scatter plot (rest of code same as before)
+import plotly.express as px
+import numpy as np
+
+np.random.seed(42)
+df_viz['EXPERIENCE_JITTER'] = df_viz['MAX_YEARS_EXPERIENCE'] + np.random.uniform(-0.3, 0.3, len(df_viz))
+
+fig_scatter = px.scatter(
+    df_viz,
+    x='EXPERIENCE_JITTER',
+    y='Average_Salary',
+    color='REMOTE_GROUP',
+    hover_data=['LOT_V6_SPECIALIZED_OCCUPATION_NAME'],
+    title='Salary by Experience and Remote Work Type'
+)
+
+fig_scatter.show()
 
 
 ```
