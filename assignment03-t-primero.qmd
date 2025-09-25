@@ -16,6 +16,8 @@ format:
     toc-depth: 2
   docx: default
   pdf: default
+fig-format: png
+fig-dpi: 300
 execute:
   freeze: auto
 date-modified: today
@@ -48,7 +50,7 @@ from pyspark.sql.functions import col, monotonically_increasing_id
 
 np.random.seed(42)
 
-pio.renderers.default = "notebook"
+pio.renderers.default = "png"
 
 # Initialize Spark Session
 spark = SparkSession.builder.appName("LightcastData").getOrCreate()
@@ -216,8 +218,21 @@ fig.update_layout(
 # Show the figure
 fig.show()
 ```
-# Salary Distribution by Industry
-
+# Salary Distribution by Industry and Employment Type
+Compare salary variations across industries.
+Filter the dataset
+Remove records where salary is missing or zero.
+Aggregate Data
+Group by NAICS industry codes.
+Group by employment type and compute salary distribution.
+Visualize results
+Create a box plot where:
+X-axis = NAICS2_NAME
+Y-axis = SALARY_FROM
+Group by EMPLOYMENT_TYPE_NAME.
+Customize colors, fonts, and styles.
+Explanation: Write two sentences about what the graph reveals.
+# The graph reveals that fields like educational services, real estate, public administration, and arts have the largest median salary distributions, which means that salaries are more likely to vary. Salaries like Information,and finance have more accurate and higher paying median salaries, since their distribtion is lower. 
 ```{python}
 
 #| eval: true
@@ -246,7 +261,7 @@ Create a bubble chart where:
 **Size** = Number of job postings
 Apply custom colors and font styles.
 **Explanation**: Write two sentences about what the graph reveals.
-
+# The graph reveals that Enterprise Architects have the highest median salary and most number of job postings. It seems that this occupation is in high demand in the industry. Analysts and consultants have lower median salaries and lower job postings.
 ```{python}
 #| eval: true
 #| echo: false
@@ -273,6 +288,8 @@ salary_pd.head()
 
 # Step 3: Bubble chart using Plotly
 import plotly.express as px
+import plotly.io as pio
+pio.renderers.default = "png"
 
 fig = px.scatter(
     salary_pd,
@@ -315,8 +332,17 @@ fig.update_layout(
 # Step 5: Show and export
 fig.show()
 fig.write_image("output/Q7.svg", width=1000, height=600, scale=1)
+![](output/Q7.svg)
 ```
-
+# Salary by Education Level
+Create two groups:
+Associate’s or lower (GED, Associate, No Education Listed)
+Bachelor’s (Bachelor’s degree)
+Master’s (Master’s degree)
+PhD (PhD, Doctorate, professional degree)
+Plot scatter plots for each group using, MAX_YEARS_EXPERIENCE (with jitter), Average_Salary, LOT_V6_SPECIALIZED_OCCUPATION_NAME
+After each graph, add a short explanation of key insights.
+# The results show us that a lot of as experience increases, a degree like a master's degree or PhD isn't necessarily more popular. This supports the idea that experience is better at a certain point than education.
 
 ```{python}
 # Defining education level groupings
@@ -397,6 +423,7 @@ Onsite (includes [None] and blank)
 Plot scatter plots for each group using, 'MAX_YEARS_EXPERIENCE' (with jitter), 'Average_Salary', 'LOT_V6_SPECIALIZED_OCCUPATION_NAME'
 Also, create salary histograms for all three groups.
 After each graph, briefly describe any patterns or comparisons.
+# My Plot shows that Remote workers tend to have less years of experience, while most onsite workers have been at the company for longer periods of time.
 ```{python}
 
 # Step 1: Create the Average_Salary column using SQL
